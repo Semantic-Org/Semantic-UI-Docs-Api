@@ -16,7 +16,8 @@ local.properties
 .settings/
 .loadpath
 node_modules/
-.sftp-config
+sftp-config.json
+config/
 
 # External tool builders
 .externalToolBuilders/
