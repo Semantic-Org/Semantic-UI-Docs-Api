@@ -22,6 +22,73 @@ app.get('/search', function(request, response) {
   response.send('Please specify a search term');
 });
 
+app.get('/tags/:query', function(request, response, next) {
+  var
+    Animals   = sequelize.define('Animals', schema.animals, server.table.animals),
+    query     = request.param('query') || false,
+    apiResponse = {
+      success: true,
+      results: {}
+    },
+    getAnimals,
+    results
+  ;
+
+  if(!query) {
+    response.send('Please specify a search term');
+  }
+
+  getAnimals = function(next) {
+    Animals
+      .findAll({
+        where: [
+          "name LIKE '"+ query +"%'"
+        ],
+        limit: 3
+      })
+      .error(function(error) {
+        response.send('Error');
+        next();
+      })
+      .success(function(animals) {
+        var
+          results = [],
+          count   = animals.length,
+          index   = 0
+        ;
+        if(animals && count > 0) {
+          while(index < count) {
+            var
+              animal = animals[index]
+            ;
+            // push animal to animals
+            results.push({
+              name  : animal.name,
+              value : animal.name.toLowerCase()
+            });
+            index++;
+          }
+          apiResponse.results = results;
+        }
+        next();
+      })
+    ;
+  };
+
+  response.type('application/json');
+  sequelize
+    .authenticate()
+    .then(function() {
+      async.series([
+        getAnimals
+      ], function() {
+        response.json(apiResponse);
+      });
+    })
+  ;
+
+});
+
 app.get('/search/:query', function(request, response, next) {
   var
     Animals   = sequelize.define('Animals', schema.animals, server.table.animals),
