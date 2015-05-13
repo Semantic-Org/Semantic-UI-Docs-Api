@@ -13,6 +13,12 @@ var
   })
 ;
 
+app.use(function(request, response, next) {
+  response.header('Access-Control-Allow-Origin', '*');
+  response.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 app.get('/', function(request, response) {
   response.send('Semantic API');
 });
@@ -64,7 +70,7 @@ app.get('/tags/:query', function(request, response, next) {
             // push animal to animals
             results.push({
               name  : animal.name,
-              value : animal.name.toLowerCase()
+              value : animal.name.toLowerCase().replace(' ', '-')
             });
             index++;
           }
@@ -89,7 +95,7 @@ app.get('/tags/:query', function(request, response, next) {
 
 });
 
-app.get('/search/:query', function(request, response, next) {
+app.get('/search/category/:query', function(request, response, next) {
   var
     Animals   = sequelize.define('Animals', schema.animals, server.table.animals),
     Passwords = sequelize.define('Passwords', schema.passwords, server.table.passwords),
@@ -277,6 +283,67 @@ app.get('/search/:query', function(request, response, next) {
         getPasswords,
         getDogs,
         getCats
+      ], function() {
+        response.json(apiResponse);
+      });
+    })
+  ;
+});
+
+app.get('/search/:query', function(request, response, next) {
+  var
+    Passwords = sequelize.define('Passwords', schema.passwords, server.table.passwords),
+    query     = request.param('query') || false,
+    apiResponse = {
+      success: true,
+      results: {}
+    },
+    getPasswords,
+    results
+  ;
+
+  if(!query) {
+    response.send('Please specify a search term');
+  }
+  getPasswords = function(next) {
+    Passwords
+      .findAll({
+        where: [
+          "password LIKE '"+ query +"%'"
+        ],
+        limit: 3
+      })
+      .error(function(error) {
+        response.send('Error');
+        next();
+      })
+      .success(function(passwords) {
+        var
+          results  = [],
+          count    = passwords.length,
+          index    = 0
+        ;
+        if(passwords && count > 0) {
+          while(index < count) {
+            var password = passwords[index];
+            results.push({
+              title       : password.password
+            });
+            index++;
+          }
+          apiResponse.results = results;
+        }
+        next();
+      })
+    ;
+  };
+
+  response.type('application/json');
+  sequelize
+    .authenticate()
+    .then(function() {
+      async.series([
+        getPasswords
       ], function() {
         response.json(apiResponse);
       });
